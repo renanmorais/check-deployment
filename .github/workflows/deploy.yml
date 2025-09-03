@@ -36,6 +36,15 @@ jobs:
       - name: Build project
         run: npm run build
 
+      # Debug: verificar conteúdo da pasta dist
+      - name: Debug - List dist contents
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          echo "=== Conteúdo da pasta dist ==="
+          ls -la dist/
+          echo "=== Conteúdo do index.html ==="
+          head -10 dist/index.html
+
       # Criar deployment apenas para push na main (não PR)
       - name: Create GitHub Deployment (production)
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
