@@ -43,19 +43,6 @@ jobs:
           test -f dist/index.html || (echo "ERRO: dist/index.html não encontrado"; exit 1)
           echo "OK: dist/index.html encontrado"
 
-      - name: Set Version from tag
-        if: startsWith(github.ref, 'refs/tags/')
-        run: echo "VERSION=${GITHUB_REF_NAME}" >> $GITHUB_ENV
-
-      # Debug: verificar conteúdo da pasta dist
-      - name: Debug - List dist contents
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: |
-          echo "=== Conteúdo da pasta dist ==="
-          ls -la dist/
-          echo "=== Conteúdo do index.html ==="
-          head -10 dist/index.html
-
       # Criar deployment apenas para push na main (não PR)
       - name: Create GitHub Deployment (production)
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -91,16 +78,16 @@ jobs:
               log_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
             });
 
-      # Deploy para GitHub Pages
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+      # Publicar Pages via workflow oficial (NÃO usa branch gh-pages)
+      - name: Upload Pages artifact
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist
-          force_orphan: true
-          user_name: 'github-actions[bot]'
-          user_email: 'github-actions[bot]@users.noreply.github.com'
+          path: ./dist
+
+      - name: Deploy to GitHub Pages
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: actions/deploy-pages@v4
 
       # Marcar deployment como sucesso
       - name: Set Deployment Status - Success
