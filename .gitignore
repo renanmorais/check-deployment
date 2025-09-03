@@ -98,7 +98,8 @@ out
 
 # Nuxt.js build / generate output
 .nuxt
-dist
+# Comentar a linha abaixo para permitir que dist seja commitado quando necessário
+# dist
 
 # Gatsby files
 .cache/
