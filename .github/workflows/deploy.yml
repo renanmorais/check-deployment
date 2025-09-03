@@ -36,6 +36,17 @@ jobs:
       - name: Build project
         run: npm run build
 
+      # Validar artefato
+      - name: Validate build artifact
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          test -f dist/index.html || (echo "ERRO: dist/index.html não encontrado"; exit 1)
+          echo "OK: dist/index.html encontrado"
+
+      - name: Set Version from tag
+        if: startsWith(github.ref, 'refs/tags/')
+        run: echo "VERSION=${GITHUB_REF_NAME}" >> $GITHUB_ENV
+
       # Debug: verificar conteúdo da pasta dist
       - name: Debug - List dist contents
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
