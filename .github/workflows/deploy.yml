@@ -1,0 +1,99 @@
+name: Deploy
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build project
+        run: npm run build
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        if: github.ref == 'refs/heads/main'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+
+      # Criar deployment no GitHub
+      - name: Create GitHub Deployment
+        uses: actions/github-script@v7
+        id: create-deployment
+        with:
+          script: |
+            const deployment = await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.sha,
+              environment: 'production',
+              description: 'Deploy via GitHub Actions',
+              auto_merge: false,
+              required_contexts: []
+            });
+            return deployment.data.id;
+
+      # Marcar deployment como "in_progress"
+      - name: Set deployment status to in_progress
+        uses: actions/github-script@v7
+        if: steps.create-deployment.outputs.result
+        with:
+          script: |
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: ${{ steps.create-deployment.outputs.result }},
+              state: 'in_progress',
+              description: 'Deployment em andamento...',
+              environment_url: 'https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}'
+            });
+
+      # Marcar deployment como sucesso
+      - name: Set deployment status to success
+        uses: actions/github-script@v7
+        if: success() && steps.create-deployment.outputs.result
+        with:
+          script: |
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: ${{ steps.create-deployment.outputs.result }},
+              state: 'success',
+              description: 'Deployment realizado com sucesso! 🚀',
+              environment_url: 'https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}'
+            });
+
+      # Marcar deployment como erro em caso de falha
+      - name: Set deployment status to failure
+        uses: actions/github-script@v7
+        if: failure() && steps.create-deployment.outputs.result
+        with:
+          script: |
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: ${{ steps.create-deployment.outputs.result }},
+              state: 'failure',
+              description: 'Deployment falhou! ❌ Verifique os logs.',
+              environment_url: 'https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}'
+            });
